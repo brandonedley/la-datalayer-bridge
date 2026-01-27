@@ -287,6 +287,10 @@ Ensure:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Roadmap
+
+- [ ] **Quote flow detection** - Detect and track quote requests separately from bookings with pricing. Some ORES configurations don't show prices (operator choice or no matching rates), resulting in quote/lead submissions rather than priced bookings. Need to analyze the widget to identify distinguishing signals.
+
 ## Support
 
 For issues or questions, contact your implementation team.
