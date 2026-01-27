@@ -34,6 +34,16 @@
 (function() {
   'use strict';
 
+  // ========================================
+  // LA DATALAYER BRIDGE - PARENT RECEIVER
+  // Copyright 2026 Brandon Edley. All Rights Reserved.
+  // Licensed for Limo Anywhere ORES integrations only.
+  // ========================================
+  var _LA_BRIDGE_ID = 'LADB-2026-EDLEY-7X9K2';
+  var _LA_BRIDGE_VERSION = '1.0.0';
+  var _LA_BRIDGE_BUILD = '20260127';
+  var _w = 'Q29weXJpZ2h0IDIwMjYgQnJhbmRvbiBFZGxleS4gTGljZW5zZWQgZm9yIExBIE9SRVMgb25seS4=';
+
   // Find our script tag and read configuration
   var script = document.currentScript || document.querySelector('script[data-la-bridge]');
 
