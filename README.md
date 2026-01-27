@@ -16,17 +16,26 @@ When embedding the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, ana
 
 Add this script to any page that embeds the Limo Anywhere widget:
 
+**Option A: External script (recommended)**
 ```html
 <!-- Limo Anywhere dataLayer Bridge - Parent Receiver -->
 <script
   data-la-bridge
   data-measurement-id="G-XXXXXXXXXX"
-  data-debug="false"
-  src="parent-receiver.js"
+  src="https://yourcdn.com/parent-receiver.js"
 ></script>
 ```
 
-Or copy the contents of `parent-receiver.js` directly into your page.
+**Option B: Inline script (paste directly)**
+```html
+<!-- Limo Anywhere dataLayer Bridge - Parent Receiver -->
+<script data-la-bridge data-measurement-id="G-XXXXXXXXXX">
+// Paste the contents of parent-receiver.js here
+// (or use min/parent-receiver.min.js for smaller size)
+</script>
+```
+
+Both options work identically. Inline is useful when you can't host external scripts or want everything in one place.
 
 ### 2. Deploy the Sender Tag to GTM
 
