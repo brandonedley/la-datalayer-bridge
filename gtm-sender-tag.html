@@ -1,0 +1,714 @@
+<!--
+  Limo Anywhere dataLayer Bridge - GTM Sender Tag
+
+  DEPLOYMENT:
+  ===========
+  1. Open Google Tag Manager
+  2. Go to the GTM container for the WIDGET domain (book.mylimobiz.com)
+  3. Create a new tag:
+     - Tag Type: Custom HTML
+     - Paste this entire code block
+  4. Configure trigger:
+     - Trigger Type: DOM Ready
+     - This trigger fires on: All Pages
+  5. Set Tag Firing Priority: 1 (Advanced Settings)
+     - This ensures the bridge loads before other tags
+  6. Save and Publish
+
+  WHAT IT DOES:
+  =============
+  - Intercepts all dataLayer.push() calls in the widget
+  - Listens for user interactions (clicks, form focus)
+  - Sends events to the parent page via postMessage
+  - Parent page receives events and fires them to GA4
+-->
+<script>
+(function() {
+  'use strict';
+
+  // ========================================
+  // CONFIGURATION
+  // ========================================
+
+  var MESSAGE_TYPE = 'LA_DATALAYER_EVENT';
+  var HEIGHT_MESSAGE_TYPE = 'LA_IFRAME_HEIGHT';
+  var SESSION_ID = 'la_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  var DEBUG = false; // Set to true for console logging
+  var HEIGHT_THRESHOLD = 5; // Minimum px change to trigger update
+
+  // ========================================
+  // IMPLEMENTATION
+  // ========================================
+
+  function log() {
+    if (DEBUG) {
+      console.log.apply(console, ['[LA-Bridge Sender]'].concat(Array.prototype.slice.call(arguments)));
+    }
+  }
+
+  function isInIframe() {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function identifyEventType(eventData) {
+    if (eventData.event) {
+      return eventData.event;
+    }
+    if (eventData['0'] === 'event' && eventData['1']) {
+      return eventData['1'];
+    }
+    if (eventData.transactionId || eventData.transactionTotal) {
+      return 'purchase';
+    }
+    if (eventData.ecommerce) {
+      return 'ecommerce';
+    }
+    var keys = Object.keys(eventData);
+    if (keys.length > 0 && keys.length <= 3) {
+      return keys.join('_');
+    }
+    return 'unknown';
+  }
+
+  function normalizeEventData(eventData, eventName) {
+    var normalized = { event: eventName };
+
+    if (eventData['0'] === 'event' && eventData['2']) {
+      var params = eventData['2'];
+      if (eventName === 'purchase') {
+        normalized.transaction_id = params.transaction_id;
+        normalized.value = params.value;
+        normalized.currency = params.currency || 'USD';
+      }
+      return normalized;
+    }
+
+    if (eventData.transactionId || eventData.transactionTotal) {
+      normalized.transaction_id = eventData.transactionId;
+      normalized.value = parseFloat(eventData.transactionTotal) || 0;
+      normalized.currency = 'USD';
+      return normalized;
+    }
+
+    return Object.assign(normalized, eventData);
+  }
+
+  function sendToParent(eventData) {
+    if (!isInIframe()) return;
+
+    var eventName = identifyEventType(eventData);
+
+    if (eventData['0'] === 'js' || eventData['0'] === 'config') {
+      return;
+    }
+
+    var normalizedData = normalizeEventData(eventData, eventName);
+
+    var message = {
+      type: MESSAGE_TYPE,
+      payload: {
+        eventName: eventName,
+        data: normalizedData,
+        rawData: eventData,
+        timestamp: Date.now(),
+        url: window.location.href,
+        sessionId: SESSION_ID
+      }
+    };
+
+    try {
+      window.parent.postMessage(message, '*');
+      log('Sent event:', message.payload.eventName);
+    } catch (e) {
+      log('Failed to send:', e);
+    }
+  }
+
+  // ========================================
+  // IFRAME HEIGHT SENDER (Optimized)
+  // ========================================
+  // Uses requestAnimationFrame for natural throttling (~60fps max)
+  // Only sends when height changes by more than threshold
+  // ResizeObserver only - no redundant MutationObserver or polling
+
+  var lastSentHeight = 0;
+  var rafId = null;
+
+  function sendHeight() {
+    // Get document height using multiple methods for reliability
+    var height = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight,
+      document.documentElement.clientHeight
+    );
+
+    // Add a small buffer to prevent edge-case scrollbars
+    height = Math.ceil(height) + 1;
+
+    // Only send if height changed by more than threshold (reduces noise)
+    if (Math.abs(height - lastSentHeight) > HEIGHT_THRESHOLD && height > 0) {
+      lastSentHeight = height;
+      try {
+        window.parent.postMessage({
+          type: HEIGHT_MESSAGE_TYPE,
+          height: height,
+          sessionId: SESSION_ID
+        }, '*');
+        log('Sent height:', height);
+      } catch (e) {
+        log('Failed to send height:', e);
+      }
+    }
+  }
+
+  function scheduleHeightUpdate() {
+    // Use requestAnimationFrame for natural throttling
+    // This syncs with browser paint cycle and batches rapid changes
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+    rafId = requestAnimationFrame(function() {
+      rafId = null;
+      sendHeight();
+    });
+  }
+
+  function setupHeightObserver() {
+    if (!isInIframe()) return;
+
+    // ResizeObserver is sufficient - it catches all size changes
+    // MutationObserver is redundant and adds overhead
+    // Browser support is 96%+ as of 2024
+    if (typeof ResizeObserver !== 'undefined') {
+      var resizeObserver = new ResizeObserver(scheduleHeightUpdate);
+      resizeObserver.observe(document.body);
+      resizeObserver.observe(document.documentElement);
+      log('ResizeObserver installed');
+    } else {
+      // Fallback only for very old browsers without ResizeObserver
+      log('ResizeObserver not available, using fallback');
+      setInterval(sendHeight, 500);
+    }
+
+    // Send initial height after content renders
+    // Using load event is more reliable than arbitrary timeouts
+    if (document.readyState === 'complete') {
+      sendHeight();
+    } else {
+      window.addEventListener('load', sendHeight);
+    }
+
+    log('Height observer setup complete');
+  }
+
+  function interceptDataLayer() {
+    window.dataLayer = window.dataLayer || [];
+    var originalPush = window.dataLayer.push.bind(window.dataLayer);
+
+    window.dataLayer.push = function() {
+      var args = Array.prototype.slice.call(arguments);
+      args.forEach(function(item) {
+        if (item && typeof item === 'object') {
+          sendToParent(item);
+        }
+      });
+      return originalPush.apply(window.dataLayer, args);
+    };
+
+    log('dataLayer interceptor installed');
+
+    window.dataLayer.forEach(function(item) {
+      if (item && typeof item === 'object') {
+        if (item.event) {
+          sendToParent(item);
+        } else if (item['0'] === 'event' && item['1']) {
+          sendToParent(item);
+        } else if (item.transactionId || item.transactionTotal) {
+          sendToParent(item);
+        }
+      }
+    });
+  }
+
+  function protectDataLayer() {
+    var currentDataLayer = window.dataLayer;
+    Object.defineProperty(window, 'dataLayer', {
+      get: function() { return currentDataLayer; },
+      set: function(newValue) {
+        log('dataLayer reassignment detected');
+        currentDataLayer = newValue;
+        if (Array.isArray(newValue)) {
+          interceptDataLayer();
+        }
+      },
+      configurable: true
+    });
+  }
+
+  // ========================================
+  // ELEMENT OBSERVATION HELPERS
+  // ========================================
+  // Used for validation-aware event tracking - waits for elements to appear
+  // rather than firing events after arbitrary timeouts
+
+  var activeObservers = {};
+
+  function cleanupObserver(key) {
+    if (activeObservers[key]) {
+      activeObservers[key].observer.disconnect();
+      clearTimeout(activeObservers[key].timeout);
+      delete activeObservers[key];
+    }
+  }
+
+  function observeForElement(options) {
+    var key = options.key;
+    var selector = options.selector;
+    var maxWait = options.maxWait || 10000;
+    var onFound = options.onFound;
+    var onTimeout = options.onTimeout;
+
+    // Clean up any existing observer for this key
+    cleanupObserver(key);
+
+    // Check if elements already present
+    var existing = document.querySelectorAll(selector);
+    if (existing.length > 0) {
+      onFound(existing);
+      return;
+    }
+
+    // Set up MutationObserver to watch for elements appearing
+    var observer = new MutationObserver(function() {
+      var elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        cleanupObserver(key);
+        onFound(elements);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Set up timeout as fallback
+    var timeout = setTimeout(function() {
+      cleanupObserver(key);
+      if (onTimeout) onTimeout();
+    }, maxWait);
+
+    activeObservers[key] = { observer: observer, timeout: timeout };
+  }
+
+  // ========================================
+  // ENHANCED CONVERSIONS - USER DATA
+  // ========================================
+  // Collects and hashes user contact info for better conversion attribution
+  // Google can match conversions even when cookies are blocked/cleared
+
+  var contactInfoCaptured = false;
+
+  // SHA256 hash using browser's native crypto API
+  function sha256(str) {
+    if (!str || !window.crypto || !window.crypto.subtle) return Promise.resolve(null);
+    var buffer = new TextEncoder().encode(str);
+    return window.crypto.subtle.digest('SHA-256', buffer).then(function(hash) {
+      return Array.from(new Uint8Array(hash))
+        .map(function(b) { return b.toString(16).padStart(2, '0'); })
+        .join('');
+    }).catch(function() { return null; });
+  }
+
+  // Normalize email per Google's requirements
+  function normalizeEmail(email) {
+    if (!email) return null;
+    email = email.trim().toLowerCase();
+    // Remove dots before @ for gmail/googlemail
+    if (email.endsWith('@gmail.com') || email.endsWith('@googlemail.com')) {
+      var parts = email.split('@');
+      email = parts[0].replace(/\./g, '') + '@' + parts[1];
+    }
+    return email;
+  }
+
+  // Normalize phone to E.164 format
+  function normalizePhone(phone) {
+    if (!phone) return null;
+    var digits = phone.replace(/\D/g, '');
+    // Add US country code if 10 digits
+    if (digits.length === 10) {
+      digits = '1' + digits;
+    }
+    return digits.length >= 10 ? '+' + digits : null;
+  }
+
+  // Normalize name (lowercase, trim)
+  function normalizeName(name) {
+    if (!name) return null;
+    return name.trim().toLowerCase();
+  }
+
+  // Collect raw user data from contact form fields
+  function collectUserData() {
+    var data = {};
+    try {
+      var email = document.querySelector('#Passenger_Email');
+      var phone = document.querySelector('#Passenger_Phone'); // Hidden field has clean value
+      var phoneView = document.querySelector('#Passenger_Phone_View'); // Fallback
+      var firstName = document.querySelector('#Passenger_FirstName');
+      var lastName = document.querySelector('#Passenger_LastName');
+
+      if (email && email.value) data.email = normalizeEmail(email.value);
+      if (phone && phone.value) {
+        data.phone = normalizePhone(phone.value);
+      } else if (phoneView && phoneView.value) {
+        data.phone = normalizePhone(phoneView.value);
+      }
+      if (firstName && firstName.value) data.first_name = normalizeName(firstName.value);
+      if (lastName && lastName.value) data.last_name = normalizeName(lastName.value);
+    } catch (e) {
+      log('Error collecting user data:', e);
+    }
+    return data;
+  }
+
+  // Hash user data for Enhanced Conversions (async)
+  function getHashedUserData(callback) {
+    var userData = collectUserData();
+    var result = {};
+    var pending = 0;
+    var completed = 0;
+
+    function checkDone() {
+      if (completed === pending) {
+        callback(Object.keys(result).length > 0 ? result : null);
+      }
+    }
+
+    if (userData.email) {
+      pending++;
+      sha256(userData.email).then(function(hash) {
+        if (hash) result.sha256_email_address = hash;
+        completed++;
+        checkDone();
+      });
+    }
+    if (userData.phone) {
+      pending++;
+      sha256(userData.phone).then(function(hash) {
+        if (hash) result.sha256_phone_number = hash;
+        completed++;
+        checkDone();
+      });
+    }
+    if (userData.first_name) {
+      pending++;
+      sha256(userData.first_name).then(function(hash) {
+        if (hash) result.sha256_first_name = hash;
+        completed++;
+        checkDone();
+      });
+    }
+    if (userData.last_name) {
+      pending++;
+      sha256(userData.last_name).then(function(hash) {
+        if (hash) result.sha256_last_name = hash;
+        completed++;
+        checkDone();
+      });
+    }
+
+    // If no data to hash, callback immediately
+    if (pending === 0) {
+      callback(null);
+    }
+  }
+
+  // Fire add_contact_info event when user enters contact details
+  function fireContactInfoEvent() {
+    if (contactInfoCaptured) return;
+
+    var userData = collectUserData();
+    // Only fire if we have at least email or phone
+    if (!userData.email && !userData.phone) return;
+
+    contactInfoCaptured = true;
+    log('Ecommerce: add_contact_info captured');
+
+    getHashedUserData(function(hashedData) {
+      sendToParent({
+        event: 'add_contact_info',
+        user_data: hashedData
+      });
+    });
+  }
+
+  // ========================================
+  // ECOMMERCE TRACKING
+  // ========================================
+
+  var selectedVehicle = null;
+  var formStartFired = false;
+
+  function getFormData() {
+    var data = {};
+    try {
+      var serviceType = document.querySelector('#ServiceTypeId');
+      if (serviceType && serviceType.selectedIndex >= 0) {
+        data.service_type = serviceType.options[serviceType.selectedIndex].text;
+      }
+      var pickup = document.querySelector('#PickupLocation');
+      if (pickup) data.pickup = pickup.value;
+      var dropoff = document.querySelector('#DropoffLocation');
+      if (dropoff) data.dropoff = dropoff.value;
+      var date = document.querySelector('#PickUpDate');
+      if (date) data.date = date.value;
+      var time = document.querySelector('#PickUpTime');
+      if (time) data.time = time.value;
+    } catch (e) {}
+    return data;
+  }
+
+  function parsePrice(text) {
+    if (!text) return 0;
+    return parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+  }
+
+  function getVehicleFromCard(card) {
+    if (!card) return null;
+    try {
+      var titleEl = card.querySelector('.vehicle-grid-item-title, .vehicle-grid-item-heading, h2, h4, h5');
+      var priceEl = card.querySelector('.vehicle-grid-item-price');
+      var name = titleEl ? titleEl.textContent.trim() : 'Vehicle';
+      var price = parsePrice(priceEl ? priceEl.textContent : '0');
+      var itemId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+      return {
+        item_id: itemId || 'vehicle',
+        item_name: name,
+        item_category: 'Vehicle',
+        price: price,
+        quantity: 1
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getAllVehicles() {
+    var items = [];
+    try {
+      var cards = document.querySelectorAll('#step2RateSection .vehicle-grid-item');
+      cards.forEach(function(card, index) {
+        var vehicle = getVehicleFromCard(card);
+        if (vehicle) {
+          vehicle.index = index;
+          items.push(vehicle);
+        }
+      });
+    } catch (e) {}
+    return items;
+  }
+
+  function getVehicleData(btn) {
+    var data = { items: [], currency: 'USD' };
+    try {
+      var card = btn.closest('.vehicle-grid-item');
+      var vehicle = getVehicleFromCard(card);
+      if (vehicle) {
+        data.items.push(vehicle);
+        data.value = vehicle.price;
+        selectedVehicle = vehicle;
+      }
+    } catch (e) {}
+    return data;
+  }
+
+  function getCheckoutData() {
+    var data = { currency: 'USD', items: [] };
+    if (selectedVehicle) {
+      data.items.push(selectedVehicle);
+      data.value = selectedVehicle.price;
+    }
+    return data;
+  }
+
+  function setupEcommerceListeners() {
+    // Click events
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+
+      // view_item_list - uses MutationObserver to detect when vehicles actually appear
+      // This ensures the event only fires when form validation passes
+      if (target.matches('#showRatesBtn') || target.closest('#showRatesBtn')) {
+        log('Ecommerce: view_item_list requested, waiting for vehicles...');
+        observeForElement({
+          key: 'view_item_list',
+          selector: '#step2RateSection .vehicle-grid-item',
+          maxWait: 10000,
+          onFound: function(vehicles) {
+            log('Ecommerce: view_item_list (' + vehicles.length + ' vehicles)');
+            sendToParent({
+              event: 'view_item_list',
+              item_list_id: 'vehicles',
+              item_list_name: 'Available Vehicles',
+              items: getAllVehicles(),
+              form_data: getFormData()
+            });
+          },
+          onTimeout: function() {
+            log('Ecommerce: view_item_list skipped (validation failed or timeout)');
+          }
+        });
+      }
+
+      // select_item
+      var vehicleBtn = target.closest('#step2RateSection .vehicle-grid-item-btn-holder button');
+      if (vehicleBtn && !target.closest('#showRatesBtn')) {
+        log('Ecommerce: select_item');
+        var vehicleData = getVehicleData(vehicleBtn);
+        sendToParent(Object.assign({ event: 'select_item' }, vehicleData));
+      }
+
+      // begin_checkout - with Enhanced Conversions user_data
+      var guestBtn = target.closest('#step3LoginForm button[type="submit"], #ContinueAsGuest, #btnContinueAsGuest');
+      if (guestBtn || (target.tagName === 'BUTTON' && target.textContent.toLowerCase().includes('continue as guest'))) {
+        log('Ecommerce: begin_checkout');
+        var checkoutData = getCheckoutData();
+
+        // Include hashed user data for Enhanced Conversions
+        getHashedUserData(function(hashedUserData) {
+          var eventData = Object.assign({
+            event: 'begin_checkout',
+            form_data: getFormData()
+          }, checkoutData);
+
+          if (hashedUserData) {
+            eventData.user_data = hashedUserData;
+            log('Enhanced Conversions: user_data attached');
+          }
+
+          sendToParent(eventData);
+        });
+      }
+
+    }, true);
+
+    // add_payment_info - with Enhanced Conversions user_data
+    document.addEventListener('change', function(e) {
+      if (e.target.matches('#PaymentTypeId')) {
+        log('Ecommerce: add_payment_info');
+        var selectedOption = e.target.options[e.target.selectedIndex];
+        var paymentType = (selectedOption && selectedOption.text) || 'unknown';
+        var checkoutData = getCheckoutData();
+
+        // Include hashed user data for Enhanced Conversions
+        getHashedUserData(function(hashedUserData) {
+          var eventData = Object.assign({
+            event: 'add_payment_info',
+            payment_type: paymentType,
+            form_data: getFormData()
+          }, checkoutData);
+
+          if (hashedUserData) {
+            eventData.user_data = hashedUserData;
+          }
+
+          sendToParent(eventData);
+        });
+      }
+    }, true);
+
+    // form_start
+    var formFieldSelectors = '#PickUpDate, #PickUpTime, #PickupLocation, #DropoffLocation, #ServiceTypeId, #Passengers, #Luggage';
+
+    function fireFormStart(fieldName) {
+      if (formStartFired) return;
+      formStartFired = true;
+      log('Form: form_start triggered by', fieldName);
+      sendToParent({
+        event: 'form_start',
+        form_id: 'booking_form',
+        form_name: 'Limo Booking Form',
+        form_destination: window.location.href,
+        first_field: fieldName
+      });
+    }
+
+    document.addEventListener('focus', function(e) {
+      if (e.target.matches && e.target.matches(formFieldSelectors)) {
+        fireFormStart(e.target.id || e.target.name || 'unknown');
+      }
+    }, true);
+
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      if (target.matches && (target.matches(formFieldSelectors) || target.closest('.datepickerbutton, .timepicker'))) {
+        var field = target.closest(formFieldSelectors) || target;
+        fireFormStart(field.id || field.name || 'booking_field');
+      }
+    }, true);
+
+    document.addEventListener('change', function(e) {
+      if (e.target.matches('#ServiceTypeId')) {
+        fireFormStart('ServiceTypeId');
+      }
+    }, true);
+
+    // add_contact_info - fires when user fills in contact fields (for Enhanced Conversions)
+    var contactFieldSelectors = '#Passenger_Email, #Passenger_Phone, #Passenger_Phone_View';
+    document.addEventListener('blur', function(e) {
+      if (e.target.matches && e.target.matches(contactFieldSelectors)) {
+        // Small delay to ensure field value is captured
+        setTimeout(fireContactInfoEvent, 100);
+      }
+    }, true);
+
+    // Also fire on change for email field
+    document.addEventListener('change', function(e) {
+      if (e.target.matches && e.target.matches('#Passenger_Email')) {
+        setTimeout(fireContactInfoEvent, 100);
+      }
+    }, true);
+
+    log('Ecommerce listeners installed');
+  }
+
+  // ========================================
+  // INITIALIZE
+  // ========================================
+
+  function init() {
+    log('Initializing session:', SESSION_ID);
+
+    if (!isInIframe()) {
+      log('Not in iframe, sender disabled');
+      return;
+    }
+
+    interceptDataLayer();
+    protectDataLayer();
+    setupEcommerceListeners();
+    setupHeightObserver();
+
+    // Only send init event in debug mode (diagnostic only, not for GA4)
+    if (DEBUG) {
+      sendToParent({
+        event: 'la_bridge_init',
+        la_session_id: SESSION_ID,
+        la_widget_url: window.location.href,
+        _debug_only: true  // Signal to receiver: dataLayer only, skip gtag
+      });
+    }
+
+    log('Sender initialized');
+  }
+
+  init();
+
+})();
+</script>
