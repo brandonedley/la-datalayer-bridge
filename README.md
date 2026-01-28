@@ -111,6 +111,8 @@ Use this when you can't upload files to your server (e.g., page builders, CMS re
 
 ### Examples
 
+#### External Script (hosted file)
+
 **Minimal (auto-detect GA4):**
 ```html
 <script data-la-bridge src="parent-receiver.js"></script>
@@ -136,6 +138,36 @@ Use this when you can't upload files to your server (e.g., page builders, CMS re
   src="parent-receiver.js"
 ></script>
 ```
+
+#### Inline Script (pasted code)
+
+**Minimal:**
+```html
+<script data-la-bridge>
+(function() {
+  'use strict';
+  var _LA_BRIDGE_ID = 'LADB-2026-EDLEY-7X9K2';
+  // ... paste rest of parent-receiver.js or parent-receiver.min.js here ...
+})();
+</script>
+```
+
+**With configuration:**
+```html
+<script
+  data-la-bridge
+  data-measurement-id="G-ABC123XYZ"
+  data-debug="true"
+>
+(function() {
+  'use strict';
+  var _LA_BRIDGE_ID = 'LADB-2026-EDLEY-7X9K2';
+  // ... paste rest of code here ...
+})();
+</script>
+```
+
+> **Tip:** When pasting inline, all `data-*` attributes go on the `<script>` tag. The JavaScript inside reads them automatically.
 
 ## Events Tracked
 
