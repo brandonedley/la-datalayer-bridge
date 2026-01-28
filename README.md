@@ -10,6 +10,27 @@ When embedding the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, ana
 - Preserve GCLID attribution from Google Ads
 - Fire conversion events from your domain
 
+## ORES Settings Compatibility
+
+**You don't need to change anything in your Limo Anywhere settings.** The bridge works regardless of your ORES configuration.
+
+### Google Tag ID in ORES Settings
+
+In Limo Anywhere's backend under **ORES & Mobile Settings**, there's a field labeled **"Google Tag ID"**. This setting affects what events ORES emits:
+
+| ORES Google Tag ID Setting | What ORES Emits | Bridge Behavior |
+|---------------------------|-----------------|-----------------|
+| **Configured** (e.g., `G-ABC123`) | GA4-style `gtag("event", "purchase", {...})` | ✅ Captured and forwarded |
+| **Empty / Not configured** | Legacy `dataLayer.push({transactionId, transactionTotal})` | ✅ Captured and forwarded |
+
+### What This Means For You
+
+- **No GTAG in ORES?** No problem. The bridge captures the legacy dataLayer event.
+- **Already have GTAG in ORES?** The bridge captures the GA4 event. No double-tracking—events are deduplicated.
+- **Want to add GTAG to ORES later?** Go ahead. The bridge adapts automatically.
+
+The bridge normalizes both formats into a consistent `purchase` event with `transaction_id`, `value`, and `currency`.
+
 ## Quick Start
 
 ### 1. Add the Parent Receiver to Your Page
