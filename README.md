@@ -65,15 +65,26 @@ Add this script to any page that embeds the Limo Anywhere widget:
 ```
 
 **Option B: Inline script (paste directly)**
+
+Use this when you can't upload files to your server (e.g., page builders, CMS restrictions).
+
+**Steps:**
+1. Open [`parent-receiver.js`](https://github.com/brandonedley/la-datalayer-bridge/blob/main/parent-receiver.js) (or [`min/parent-receiver.min.js`](https://github.com/brandonedley/la-datalayer-bridge/blob/main/min/parent-receiver.min.js) for smaller size)
+2. Click "Raw" to view the plain code
+3. Copy the entire file contents
+4. Paste into your page like this:
+
 ```html
 <!-- Limo Anywhere dataLayer Bridge - Parent Receiver -->
 <script data-la-bridge data-measurement-id="G-XXXXXXXXXX">
-// Paste the contents of parent-receiver.js here
-// (or use min/parent-receiver.min.js for smaller size)
+(function() {
+  'use strict';
+  // ... rest of the pasted code goes here ...
+})();
 </script>
 ```
 
-Both work identically. Use inline when you can't host external scripts.
+**Important:** The `data-la-bridge` and `data-measurement-id` attributes go on the opening `<script>` tag itself, not inside the JavaScript.
 
 ### 2. Deploy the Sender Tag to GTM
 
