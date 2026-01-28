@@ -29,7 +29,7 @@ This field controls which GTM container loads in the widget. **The sender tag mu
 | `GTM-XXXXXXX` | `XXXXXXX` |
 | `GTM-ABC123` | `ABC123` |
 
-**Common mistake:** Entering `GTM-XXXXXXX` (with the prefix) will NOT work. Enter only `XXXXXXX`.
+**Common mistake:** Entering `GTM-XXXXXXX` (with the prefix) breaks the integration. Enter only `XXXXXXX`.
 
 #### 2. Google Tag ID
 

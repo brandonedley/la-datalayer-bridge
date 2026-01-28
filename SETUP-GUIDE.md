@@ -1,6 +1,6 @@
 # Limo Anywhere dataLayer Bridge - Setup Guide
 
-Complete step-by-step instructions for setting up the analytics bridge.
+Step-by-step setup instructions.
 
 ---
 
@@ -195,7 +195,7 @@ With `data-debug="true"` set, you should see `la_bridge_init` in the console and
 2. Clear browser cache (Ctrl+Shift+R)
 3. Wait 60 seconds for GTM CDN
 
-**Note:** `la_bridge_init` only fires in debug mode and goes to dataLayer only (not GA4).
+**Note:** `la_bridge_init` fires only in debug mode—dataLayer only, bypassing GA4.
 
 ### Events fire but not in GA4
 
