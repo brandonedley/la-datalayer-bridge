@@ -26,10 +26,10 @@ This field controls which GTM container loads in the widget. **The sender tag mu
 
 | If your container is... | Enter this value |
 |------------------------|------------------|
-| `GTM-WFMR9QB4` | `WFMR9QB4` |
+| `GTM-XXXXXXX` | `XXXXXXX` |
 | `GTM-ABC123` | `ABC123` |
 
-**Common mistake:** Entering `GTM-WFMR9QB4` (with the prefix) will NOT work. Enter only `WFMR9QB4`.
+**Common mistake:** Entering `GTM-XXXXXXX` (with the prefix) will NOT work. Enter only `XXXXXXX`.
 
 #### 2. Google Tag ID
 
