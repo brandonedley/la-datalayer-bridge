@@ -104,10 +104,44 @@ Use this when you can't upload files to your server (e.g., page builders, CMS re
 |-----------|----------|---------|-------------|
 | `data-la-bridge` | Yes | - | Marker to identify the script |
 | `data-measurement-id` | No | Auto-detect | GA4 Measurement ID (e.g., `G-XXXXXXXXXX`) |
-| `data-mode` | No | `auto` | `auto`, `gtag`, or `dataLayer` |
+| `data-mode` | No | `auto` | `auto`, `gtag`, or `dataLayer` (see below) |
 | `data-event-prefix` | No | `la_` | Prefix for dataLayer events |
 | `data-allowed-origins` | No | `https://book.mylimobiz.com` | Comma-separated allowed origins |
 | `data-debug` | No | `false` | Enable console logging |
+
+### How Mode Detection Works
+
+The `data-mode` attribute controls how the bridge fires events on your parent page:
+
+| Mode | Behavior |
+|------|----------|
+| `gtag` | Fires `gtag("event", ...)` directly to GA4 |
+| `dataLayer` | Pushes `{event: "la_purchase", ...}` to `window.dataLayer` for GTM to handle |
+| `auto` | Detects which to use (default) |
+
+**Auto mode logic:**
+
+1. If you set `data-measurement-id="G-XXXXXX"` → uses **gtag** mode
+2. Else if `window.gtag` exists on your page → uses **gtag** mode and auto-detects the measurement ID from your existing GA4 setup
+3. Else → uses **dataLayer** mode (lets your GTM handle it)
+
+**When to use each:**
+
+| Your setup | Recommended mode |
+|------------|------------------|
+| gtag.js loaded directly on page (no GTM) | `auto` or `gtag` |
+| GTM manages all your GA4 tags | `dataLayer` |
+| Both gtag.js and GTM | `gtag` with explicit measurement ID |
+
+**Example: Force dataLayer mode for GTM**
+```html
+<script
+  data-la-bridge
+  data-mode="dataLayer"
+  src="parent-receiver.js"
+></script>
+```
+Then create GTM triggers for events like `la_purchase`, `la_begin_checkout`, etc.
 
 ### Examples
 
