@@ -40,8 +40,8 @@
   // Licensed for Limo Anywhere ORES integrations only.
   // ========================================
   var _LA_BRIDGE_ID = 'LADB-2026-EDLEY-7X9K2';
-  var _LA_BRIDGE_VERSION = '1.0.0';
-  var _LA_BRIDGE_BUILD = '20260127';
+  var _LA_BRIDGE_VERSION = '1.1.0';
+  var _LA_BRIDGE_BUILD = '20260128';
   var _w = 'Q29weXJpZ2h0IDIwMjYgQnJhbmRvbiBFZGxleS4gTGljZW5zZWQgZm9yIExBIE9SRVMgb25seS4=';
 
   // Find our script tag and read configuration
@@ -115,16 +115,19 @@
   }
 
   // GA4 ecommerce events
+  // Note: booking_type and is_quote are included for quote vs reservation tracking
   var GA4_EVENTS = {
-    'purchase': { name: 'purchase', params: ['transaction_id', 'value', 'currency', 'items', 'coupon', 'shipping', 'tax'] },
-    'begin_checkout': { name: 'begin_checkout', params: ['value', 'currency', 'items', 'coupon'] },
-    'add_to_cart': { name: 'add_to_cart', params: ['value', 'currency', 'items'] },
-    'view_item': { name: 'view_item', params: ['value', 'currency', 'items'] },
-    'view_item_list': { name: 'view_item_list', params: ['item_list_id', 'item_list_name', 'items'] },
-    'select_item': { name: 'select_item', params: ['item_list_id', 'item_list_name', 'items', 'value', 'currency'] },
-    'add_payment_info': { name: 'add_payment_info', params: ['value', 'currency', 'payment_type', 'items', 'coupon'] },
-    'add_shipping_info': { name: 'add_shipping_info', params: ['value', 'currency', 'shipping_tier', 'items', 'coupon'] },
-    'form_start': { name: 'form_start', params: ['form_id', 'form_name', 'form_destination', 'first_field'] }
+    'purchase': { name: 'purchase', params: ['transaction_id', 'value', 'currency', 'items', 'coupon', 'shipping', 'tax', 'booking_type', 'is_quote'] },
+    'begin_checkout': { name: 'begin_checkout', params: ['value', 'currency', 'items', 'coupon', 'booking_type', 'is_quote'] },
+    'add_to_cart': { name: 'add_to_cart', params: ['value', 'currency', 'items', 'booking_type', 'is_quote'] },
+    'view_item': { name: 'view_item', params: ['value', 'currency', 'items', 'booking_type', 'is_quote'] },
+    'view_item_list': { name: 'view_item_list', params: ['item_list_id', 'item_list_name', 'items', 'booking_type', 'is_quote'] },
+    'select_item': { name: 'select_item', params: ['item_list_id', 'item_list_name', 'items', 'value', 'currency', 'booking_type', 'is_quote'] },
+    'add_payment_info': { name: 'add_payment_info', params: ['value', 'currency', 'payment_type', 'items', 'coupon', 'booking_type', 'is_quote'] },
+    'add_shipping_info': { name: 'add_shipping_info', params: ['value', 'currency', 'shipping_tier', 'items', 'coupon', 'booking_type', 'is_quote'] },
+    'add_contact_info': { name: 'add_contact_info', params: ['booking_type', 'is_quote'] },
+    'form_start': { name: 'form_start', params: ['form_id', 'form_name', 'form_destination', 'first_field'] },
+    'generate_lead': { name: 'generate_lead', params: ['value', 'currency', 'lead_source', 'transaction_id', 'booking_type', 'is_quote'] }
   };
 
   function fireGtag(eventName, data) {

@@ -1,28 +1,3 @@
-<!--
-  Limo Anywhere dataLayer Bridge - GTM Sender Tag
-
-  DEPLOYMENT:
-  ===========
-  1. Open Google Tag Manager
-  2. Go to the GTM container for the WIDGET domain (book.mylimobiz.com)
-  3. Create a new tag:
-     - Tag Type: Custom HTML
-     - Paste this entire code block
-  4. Configure trigger:
-     - Trigger Type: DOM Ready
-     - This trigger fires on: All Pages
-  5. Set Tag Firing Priority: 1 (Advanced Settings)
-     - This ensures the bridge loads before other tags
-  6. Save and Publish
-
-  WHAT IT DOES:
-  =============
-  - Intercepts all dataLayer.push() calls in the widget
-  - Listens for user interactions (clicks, form focus)
-  - Sends events to the parent page via postMessage
-  - Parent page receives events and fires them to GA4
--->
-<script>
 (function() {
   'use strict';
 
@@ -808,4 +783,3 @@
   init();
 
 })();
-</script>
