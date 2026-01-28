@@ -14,9 +14,26 @@ When embedding the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, ana
 
 **You don't need to change anything in your Limo Anywhere settings.** The bridge works regardless of your ORES configuration.
 
-### Google Tag ID in ORES Settings
+### ORES & Mobile Settings Fields
 
-In Limo Anywhere's backend under **ORES & Mobile Settings**, there's a field labeled **"Google Tag ID"**. This setting affects what events ORES emits:
+In Limo Anywhere's backend under **ORES & Mobile Settings**, there are two relevant fields:
+
+#### 1. Tag Manager Code
+
+This field controls which GTM container loads in the widget. **The sender tag must be deployed to this container.**
+
+⚠️ **Important:** Enter ONLY the code **after** `GTM-`, not the full container ID.
+
+| If your container is... | Enter this value |
+|------------------------|------------------|
+| `GTM-WFMR9QB4` | `WFMR9QB4` |
+| `GTM-ABC123` | `ABC123` |
+
+**Common mistake:** Entering `GTM-WFMR9QB4` (with the prefix) will NOT work. Enter only `WFMR9QB4`.
+
+#### 2. Google Tag ID
+
+This field controls whether ORES fires GA4 events directly. It affects what purchase events ORES emits:
 
 | ORES Google Tag ID Setting | What ORES Emits | Bridge Behavior |
 |---------------------------|-----------------|-----------------|
