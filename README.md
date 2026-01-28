@@ -4,7 +4,7 @@ Bridge analytics events from the Limo Anywhere booking widget (iframe) to your p
 
 ## Overview
 
-When embedding the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, analytics events are isolated in the iframe's context. This bridge captures those events and forwards them to your parent page via `postMessage`, allowing you to:
+When you embed the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, the iframe isolates analytics events from your page. This bridge captures those events and forwards them to your parent page via `postMessage`, enabling you to:
 
 - Track the complete booking funnel in YOUR GA4 property
 - Preserve GCLID attribution from Google Ads
@@ -12,7 +12,7 @@ When embedding the Limo Anywhere widget (`book.mylimobiz.com`) in an iframe, ana
 
 ## ORES Settings Compatibility
 
-**You don't need to change anything in your Limo Anywhere settings.** The bridge works regardless of your ORES configuration.
+**No changes needed to your Limo Anywhere settings.** The bridge works regardless of your ORES configuration.
 
 ### ORES & Mobile Settings Fields
 
@@ -73,7 +73,7 @@ Add this script to any page that embeds the Limo Anywhere widget:
 </script>
 ```
 
-Both options work identically. Inline is useful when you can't host external scripts or want everything in one place.
+Both work identically. Use inline when you can't host external scripts.
 
 ### 2. Deploy the Sender Tag to GTM
 
@@ -138,7 +138,7 @@ Both options work identically. Inline is useful when you can't host external scr
 | `add_payment_info` | User selects payment method | Yes | ✅ Yes |
 | `purchase` | Booking completed | Yes | No |
 
-> **Note**: `view_item_list` uses MutationObserver to detect when vehicles actually appear, ensuring the event only fires when form validation passes.
+> **Note**: `view_item_list` uses MutationObserver to detect when vehicles appear, ensuring the event fires only after form validation passes.
 
 ## Event Data Examples
 
@@ -240,7 +240,7 @@ Both options work identically. Inline is useful when you can't host external scr
 
 ## Enhanced Conversions
 
-The bridge automatically collects user contact information and hashes it with SHA-256 for [Google Enhanced Conversions](https://support.google.com/google-ads/answer/9888656). This improves conversion attribution when:
+The bridge collects and SHA-256 hashes user contact information for [Google Enhanced Conversions](https://support.google.com/google-ads/answer/9888656). This improves conversion attribution when:
 
 - Third-party cookies are blocked
 - Users clear cookies between ad click and conversion
@@ -255,7 +255,7 @@ The bridge automatically collects user contact information and hashes it with SH
 | First Name | `#Passenger_FirstName` | Lowercase, trim |
 | Last Name | `#Passenger_LastName` | Lowercase, trim |
 
-All data is hashed client-side before transmission - no PII leaves the browser unhashed.
+All data is hashed client-side before transmission—PII never leaves the browser unhashed.
 
 ### GA4/Google Ads Setup
 
@@ -288,7 +288,7 @@ If `la_bridge_init` appears in debug mode but no other events fire:
 - Widget page is fully loaded before interactions
 - Form validation may be failing (check `view_item_list` requires valid form)
 
-**Note:** `la_bridge_init` only fires when `data-debug="true"` and goes to dataLayer only (not GA4).
+**Note:** `la_bridge_init` fires only with `data-debug="true"`—dataLayer only, bypassing GA4.
 
 ### GCLID not tracking
 
