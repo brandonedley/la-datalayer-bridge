@@ -1,5 +1,12 @@
 # Limo Anywhere dataLayer Bridge
 
+> **This repository has been superseded.** The bridge is now available as two products:
+>
+> - **[ORES Bridge — Standard](https://github.com/brandonedley/ores-bridge-standard)** (public) — Purchase conversion tracking + GCLID attribution
+> - **[ORES Bridge — Advanced](https://github.com/brandonedley/ores-bridge-advanced)** (private) — Full funnel tracking + Enhanced Conversions
+>
+> This repo is archived for reference only. Use the repos above for new installations.
+
 Bridge analytics events from the Limo Anywhere booking widget (iframe) to your parent page for unified GA4 tracking.
 
 ## Overview
