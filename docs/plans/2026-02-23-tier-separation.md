@@ -2,149 +2,144 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Split the monolithic bridge into two separate file sets — Standard (purchase/generate_lead + GCLID + iframe height) and Advanced (full funnel + Enhanced Conversions) — so the product team can sell them as distinct tiers.
+**Goal:** Split the monolithic `la-datalayer-bridge` repo into two standalone product repos — `ores-bridge-standard` (public) and `ores-bridge-advanced` (private) — then retire this repo.
 
-**Architecture:** Current root-level files become the Advanced tier (already have everything). Standard is a new stripped-down fork. Both tiers share the same `postMessage` protocol, configuration system, and version constants. Each tier is a self-contained sender/receiver pair with its own `min/` directory.
+**Architecture:** Each repo is a self-contained product with its own sender, receiver, minified files, README, LICENSE, and SETUP-GUIDE. Advanced gets the current codebase as-is (renamed). Standard is a stripped-down fork with only purchase/generate_lead + GCLID + iframe height. Both repos share the same `postMessage` protocol and configuration system.
 
-**Tech Stack:** Vanilla JS (ES5 + targeted ES6), no build system, manual minification.
-
----
-
-### Task 1: Create Directory Structure
-
-**Files:**
-- Create: `standard/` directory
-- Create: `standard/min/` directory
-- Create: `advanced/` directory
-- Create: `advanced/min/` directory
-
-**Step 1: Create directories**
-
-```bash
-mkdir -p standard/min advanced/min
-```
-
-**Step 2: Verify**
-
-```bash
-ls -la standard/ standard/min/ advanced/ advanced/min/
-```
-
-Expected: four empty directories
-
-**Step 3: Commit**
-
-```bash
-git add standard/.gitkeep advanced/.gitkeep standard/min/.gitkeep advanced/min/.gitkeep
-git commit -m "chore: create standard and advanced tier directories"
-```
-
-Note: if git won't track empty dirs, create `.gitkeep` files or defer commit to next task.
+**Tech Stack:** Vanilla JS (ES5 + targeted ES6), no build system, manual minification, GitHub CLI (`gh`).
 
 ---
 
-### Task 2: Create Advanced Tier (Copy Current Files)
+### Task 1: Create the Advanced Repo
 
-The current root-level files already contain everything. Copy them into `advanced/` as-is, then update the header comment to identify the tier.
+Create `brandonedley/ores-bridge-advanced` (private) from the current codebase. The current code already has everything — this is essentially a rename + tier labeling.
 
-**Files:**
-- Create: `advanced/gtm-sender-tag.html` (copy from `gtm-sender-tag.html`)
-- Create: `advanced/parent-receiver.js` (copy from `parent-receiver.js`)
-- Create: `advanced/min/gtm-sender.min.html` (copy from `min/gtm-sender.min.html`)
-- Create: `advanced/min/gtm-sender.min.js` (copy from `min/gtm-sender.min.js`)
-- Create: `advanced/min/parent-receiver.min.js` (copy from `min/parent-receiver.min.js`)
-
-**Step 1: Copy all files**
+**Step 1: Create the repo on GitHub**
 
 ```bash
-cp gtm-sender-tag.html advanced/gtm-sender-tag.html
-cp parent-receiver.js advanced/parent-receiver.js
-cp min/gtm-sender.min.html advanced/min/gtm-sender.min.html
-cp min/gtm-sender.min.js advanced/min/gtm-sender.min.js
-cp min/parent-receiver.min.js advanced/min/parent-receiver.min.js
+gh repo create brandonedley/ores-bridge-advanced --private --description "ORES Booking Widget Analytics Bridge (Advanced) — Full funnel tracking + Enhanced Conversions"
 ```
 
-**Step 2: Update header comment in `advanced/gtm-sender-tag.html`**
-
-Change the HTML comment at the top (lines 1-24) — update the title line to:
-
-```
-  Limo Anywhere dataLayer Bridge - GTM Sender Tag (Advanced)
-```
-
-And the section header inside the IIFE (line 30):
-
-```
-  // LA DATALAYER BRIDGE - GTM SENDER TAG (ADVANCED)
-```
-
-**Step 3: Update header comment in `advanced/parent-receiver.js`**
-
-Change the JSDoc title (line 3) to:
-
-```
- * Limo Anywhere dataLayer Bridge - Parent Receiver (Advanced)
-```
-
-And the section header (line 38):
-
-```
-  // LA DATALAYER BRIDGE - PARENT RECEIVER (ADVANCED)
-```
-
-**Step 4: Verify files are identical to originals (minus header changes)**
+**Step 2: Clone it locally**
 
 ```bash
-diff <(tail -n +3 gtm-sender-tag.html) <(tail -n +3 advanced/gtm-sender-tag.html)
+cd ~/dev
+git clone git@github.com:brandonedley/ores-bridge-advanced.git
+cd ores-bridge-advanced
 ```
 
-Expected: only the header/section-header lines differ.
-
-**Step 5: Commit**
+**Step 3: Copy source files from la-datalayer-bridge**
 
 ```bash
-git add advanced/
-git commit -m "feat: create advanced tier from current source files"
+cp ~/dev/la-datalayer-bridge/gtm-sender-tag.html .
+cp ~/dev/la-datalayer-bridge/parent-receiver.js .
+cp -r ~/dev/la-datalayer-bridge/min .
+cp ~/dev/la-datalayer-bridge/LICENSE .
+cp ~/dev/la-datalayer-bridge/SETUP-GUIDE.md .
+```
+
+**Step 4: Update tier labels in source files**
+
+In `gtm-sender-tag.html`:
+- HTML comment title (line 2): `Limo Anywhere dataLayer Bridge - GTM Sender Tag (Advanced)`
+- Section header (line 30): `// LA DATALAYER BRIDGE - GTM SENDER TAG (ADVANCED)`
+- WHAT IT DOES comment: add `- Tracks full booking funnel (form_start through purchase)` and `- Collects and hashes user data for Enhanced Conversions`
+
+In `parent-receiver.js`:
+- JSDoc title (line 3): `Limo Anywhere dataLayer Bridge - Parent Receiver (Advanced)`
+- Section header (line 38): `// LA DATALAYER BRIDGE - PARENT RECEIVER (ADVANCED)`
+
+**Step 5: Write README.md for Advanced**
+
+New README tailored to the Advanced product. Should include:
+- Title: `ORES Bridge — Advanced`
+- Overview: full funnel tracking + Enhanced Conversions for the Limo Anywhere ORES booking widget
+- Quick Start (same two-step: add receiver to page, deploy sender to GTM)
+- Full event list: `form_start`, `view_item_list`, `select_item`, `add_contact_info`, `begin_checkout`, `add_payment_info`, `purchase`, `generate_lead`
+- Enhanced Conversions section (SHA-256 hashed PII)
+- Configuration options table (all `data-*` attributes)
+- Mode detection explanation
+- ORES Settings Compatibility section
+- Quote detection explanation
+- Event data examples
+- Files table
+- Troubleshooting section
+- Architecture diagram
+- License
+
+Pull content from the current `la-datalayer-bridge/README.md` — most of it applies directly to Advanced.
+
+**Step 6: Write SETUP-GUIDE.md for Advanced**
+
+Copy from current `la-datalayer-bridge/SETUP-GUIDE.md`. Update the title to reference Advanced. The setup steps are identical.
+
+**Step 7: Commit and push**
+
+```bash
+git add -A
+git commit -m "feat: initial advanced tier — full funnel + Enhanced Conversions"
+git push -u origin main
 ```
 
 ---
 
-### Task 3: Create Standard Sender
+### Task 2: Create the Standard Repo
 
-Fork `gtm-sender-tag.html` into `standard/gtm-sender-tag.html`, removing all Advanced-only code. This is the most surgical task.
+Create `brandonedley/ores-bridge-standard` (public) with stripped-down code.
 
-**Files:**
-- Create: `standard/gtm-sender-tag.html`
-- Reference: `gtm-sender-tag.html` (source to fork from)
+**Step 1: Create the repo on GitHub**
 
-**What to keep from `gtm-sender-tag.html`:**
+```bash
+gh repo create brandonedley/ores-bridge-standard --public --description "ORES Booking Widget Analytics Bridge (Standard) — Purchase conversion tracking with GCLID attribution"
+```
 
-| Section | Lines | Keep? |
-|---------|-------|-------|
-| HTML comment header | 1-24 | Yes (update title to "Standard") |
-| IIFE + version constants + config | 25-47 | Yes (update section header) |
+**Step 2: Clone it locally**
+
+```bash
+cd ~/dev
+git clone git@github.com:brandonedley/ores-bridge-standard.git
+cd ores-bridge-standard
+```
+
+**Step 3: Copy LICENSE**
+
+```bash
+cp ~/dev/la-datalayer-bridge/LICENSE .
+```
+
+---
+
+### Task 3: Write the Standard Sender
+
+Create `gtm-sender-tag.html` for the Standard tier. This is the most surgical task — fork the Advanced sender and remove all Advanced-only code.
+
+**Working directory:** `~/dev/ores-bridge-standard`
+
+**What to keep from the Advanced `gtm-sender-tag.html`:**
+
+| Section | Lines (in original) | Keep? |
+|---------|---------------------|-------|
+| HTML comment header | 1-24 | Yes (update to "Standard") |
+| IIFE + version constants + config | 25-47 | Yes |
 | `log()`, `isInIframe()` | 49-65 | Yes |
 | `identifyEventType()`, `normalizeEventData()` | 67-108 | Yes |
 | `sendToParent()` with quote branch | 110-167 | Yes |
 | IFRAME HEIGHT SENDER | 169-246 | Yes |
 | `interceptDataLayer()`, `protectDataLayer()` | 248-290 | Yes |
-| ELEMENT OBSERVATION HELPERS | 292-343 | **No** (only used by view_item_list) |
+| ELEMENT OBSERVATION HELPERS | 292-343 | **No** |
 | ENHANCED CONVERSIONS | 345-487 | **No** |
 | QUOTE DETECTION | 489-541 | Yes |
 | ECOMMERCE TRACKING | 543-776 | **No** |
 | INITIALIZE | 778-811 | Yes (remove `setupEcommerceListeners()` call) |
 
-**Step 1: Write `standard/gtm-sender-tag.html`**
+**Step 1: Write `gtm-sender-tag.html`**
 
-The complete file contents — copy the kept sections in order, with these changes:
+Create the file with kept sections. Key changes from original:
 
 1. HTML comment title: `Limo Anywhere dataLayer Bridge - GTM Sender Tag (Standard)`
-2. HTML comment WHAT IT DOES: remove "Listens for user interactions (clicks, form focus)" line
+2. WHAT IT DOES: remove "Listens for user interactions (clicks, form focus)" line
 3. Section header: `LA DATALAYER BRIDGE - GTM SENDER TAG (STANDARD)`
-4. `init()` function: remove the `setupEcommerceListeners();` call (line 792 in original)
-5. Reorder: QUOTE DETECTION section should appear before `sendToParent()` since `sendToParent` calls `isQuoteMode()`. In the original this works because of function hoisting, and it will also work in the Standard version for the same reason — but for readability, keep the same order as the original (quote detection after interceptDataLayer/protectDataLayer).
-
-The Standard sender `init()` should be:
+4. `init()` body — remove `setupEcommerceListeners();` call:
 
 ```javascript
   function init() {
@@ -159,13 +154,12 @@ The Standard sender `init()` should be:
     protectDataLayer();
     setupHeightObserver();
 
-    // Only send init event in debug mode (diagnostic only, not for GA4)
     if (DEBUG) {
       sendToParent({
         event: 'la_bridge_init',
         la_session_id: SESSION_ID,
         la_widget_url: window.location.href,
-        _debug_only: true  // Signal to receiver: dataLayer only, skip gtag
+        _debug_only: true
       });
     }
 
@@ -173,181 +167,182 @@ The Standard sender `init()` should be:
   }
 ```
 
-**Step 2: Verify the Standard sender is correct**
-
-Check that:
-- No references to removed functions (`setupEcommerceListeners`, `observeForElement`, `sha256`, `getHashedUserData`, `fireContactInfoEvent`, `getFormData`, `getVehicleFromCard`, `getAllVehicles`, `getVehicleData`, `getCheckoutData`)
-- No references to removed state (`selectedVehicle`, `formStartFired`, `contactInfoCaptured`, `activeObservers`)
-- `sendToParent()` still calls `isQuoteMode()` and `addBookingTypeToEvent()` — verify those functions are present
-- `init()` does NOT call `setupEcommerceListeners()`
+**Step 2: Verify no dangling references**
 
 ```bash
 # Should return NO matches for removed functions:
-grep -n 'setupEcommerceListeners\|observeForElement\|cleanupObserver\|sha256\|normalizeEmail\|normalizePhone\|normalizeName\|collectUserData\|getHashedUserData\|fireContactInfoEvent\|getFormData\|parsePrice\|getVehicleFromCard\|getAllVehicles\|getVehicleData\|getCheckoutData\|selectedVehicle\|formStartFired\|contactInfoCaptured\|activeObservers' standard/gtm-sender-tag.html
+grep -n 'setupEcommerceListeners\|observeForElement\|cleanupObserver\|sha256\|normalizeEmail\|normalizePhone\|normalizeName\|collectUserData\|getHashedUserData\|fireContactInfoEvent\|getFormData\|parsePrice\|getVehicleFromCard\|getAllVehicles\|getVehicleData\|getCheckoutData\|selectedVehicle\|formStartFired\|contactInfoCaptured\|activeObservers' gtm-sender-tag.html
 
 # Should return matches for kept functions:
-grep -n 'sendToParent\|isQuoteMode\|addBookingTypeToEvent\|getBookingType\|interceptDataLayer\|protectDataLayer\|setupHeightObserver\|sendHeight\|isInIframe\|identifyEventType\|normalizeEventData' standard/gtm-sender-tag.html
+grep -n 'sendToParent\|isQuoteMode\|addBookingTypeToEvent\|getBookingType\|interceptDataLayer\|protectDataLayer\|setupHeightObserver' gtm-sender-tag.html
 ```
 
 Expected: first grep returns nothing, second returns multiple matches.
 
-**Step 3: Commit**
-
-```bash
-git add standard/gtm-sender-tag.html
-git commit -m "feat: create standard sender (purchase + quote + GCLID + height)"
-```
-
 ---
 
-### Task 4: Create Standard Receiver
+### Task 4: Write the Standard Receiver
 
-Fork `parent-receiver.js` into `standard/parent-receiver.js`. The only functional change is reducing `GA4_EVENTS` to just `purchase` and `generate_lead`.
+Create `parent-receiver.js` for the Standard tier. Only change from Advanced: reduce `GA4_EVENTS` to `purchase` and `generate_lead`.
 
-**Files:**
-- Create: `standard/parent-receiver.js`
-- Reference: `parent-receiver.js` (source to fork from)
+**Working directory:** `~/dev/ores-bridge-standard`
 
 **Step 1: Copy and modify**
 
-Copy `parent-receiver.js` to `standard/parent-receiver.js`, then make these changes:
+Start from `~/dev/la-datalayer-bridge/parent-receiver.js`, then:
 
-1. Update JSDoc title (line 3): `Limo Anywhere dataLayer Bridge - Parent Receiver (Standard)`
-2. Update section header (line 38): `LA DATALAYER BRIDGE - PARENT RECEIVER (STANDARD)`
+1. JSDoc title (line 3): `Limo Anywhere dataLayer Bridge - Parent Receiver (Standard)`
+2. Section header (line 38): `// LA DATALAYER BRIDGE - PARENT RECEIVER (STANDARD)`
 3. Replace `GA4_EVENTS` (lines 119-131) with:
 
 ```javascript
+  // GA4 ecommerce events — Standard tier: purchase + generate_lead only
   var GA4_EVENTS = {
     'purchase': { name: 'purchase', params: ['transaction_id', 'value', 'currency', 'items', 'coupon', 'shipping', 'tax', 'booking_type', 'is_quote'] },
     'generate_lead': { name: 'generate_lead', params: ['value', 'currency', 'lead_source', 'transaction_id', 'booking_type', 'is_quote'] }
   };
 ```
 
-Everything else stays identical — mode resolution, origin validation, deduplication, height handling, `fireGtag`, `fireDataLayer`, `handleEvent`, `onMessage`, `init`.
+Everything else stays identical.
 
 **Step 2: Verify the diff is minimal**
 
 ```bash
-diff parent-receiver.js standard/parent-receiver.js
+diff ~/dev/la-datalayer-bridge/parent-receiver.js parent-receiver.js
 ```
 
-Expected: only the header lines and GA4_EVENTS block differ.
+Expected: only header lines and GA4_EVENTS differ.
 
-**Step 3: Verify unknown events still pass through**
+---
 
-The receiver's `fireGtag()` function (line 149-152) already handles events NOT in `GA4_EVENTS` with a fallback `Object.assign`. So if the Advanced sender somehow sends a `form_start` event to a Standard receiver, it would still pass through. This is fine — the Standard sender simply won't send those events.
+### Task 5: Generate Standard Minified Files
 
-**Step 4: Commit**
+**Working directory:** `~/dev/ores-bridge-standard`
+
+**Step 1: Create min directory**
 
 ```bash
-git add standard/parent-receiver.js
-git commit -m "feat: create standard receiver (purchase + generate_lead only)"
+mkdir -p min
+```
+
+**Step 2: Minify sender**
+
+```bash
+# Extract JS from between <script> tags
+sed -n '/<script>/,/<\/script>/p' gtm-sender-tag.html | sed '1d;$d' > /tmp/standard-sender.js
+
+# Minify with terser
+npx terser /tmp/standard-sender.js -c -m -o min/gtm-sender.min.js
+
+# Create HTML-wrapped version
+echo '<script>' > min/gtm-sender.min.html
+cat min/gtm-sender.min.js >> min/gtm-sender.min.html
+echo '</script>' >> min/gtm-sender.min.html
+```
+
+**Step 3: Minify receiver**
+
+```bash
+npx terser parent-receiver.js -c -m -o min/parent-receiver.min.js
+```
+
+**Step 4: Verify**
+
+```bash
+# Bridge ID preserved
+grep -c 'LADB-2026-EDLEY-7X9K2' min/gtm-sender.min.js min/parent-receiver.min.js
+
+# No Advanced-only functions leaked through
+grep -c 'setupEcommerceListeners\|sha256\|getHashedUserData\|fireContactInfoEvent' min/gtm-sender.min.js
+
+# Size reduction
+wc -c gtm-sender-tag.html min/gtm-sender.min.html
+wc -c parent-receiver.js min/parent-receiver.min.js
+```
+
+Expected: bridge ID count = 1 per file, no Advanced functions, min files smaller.
+
+---
+
+### Task 6: Write Standard Documentation and Push
+
+**Working directory:** `~/dev/ores-bridge-standard`
+
+**Step 1: Write README.md**
+
+Standard README — simpler than Advanced. Should include:
+- Title: `ORES Bridge — Standard`
+- Overview: purchase conversion tracking + GCLID attribution for ORES booking widget
+- Quick Start (receiver + sender setup)
+- Events tracked: only `purchase` and `generate_lead` (with quote detection explanation)
+- Configuration options table (same `data-*` attributes)
+- Mode detection explanation
+- ORES Settings Compatibility section
+- Iframe auto-height resize section
+- Files table (4 files: sender, receiver, 2 minified)
+- Troubleshooting section
+- Architecture diagram
+- License
+- "Upgrade to Advanced" callout — brief mention that Advanced adds full funnel + Enhanced Conversions
+
+**Step 2: Write SETUP-GUIDE.md**
+
+Simplified from the Advanced version:
+- Same GTM sender deployment steps
+- Same parent receiver installation steps
+- Verification only checks for `purchase` event (not the full funnel)
+- Events reference table: only `purchase` and `generate_lead`
+- Remove Enhanced Conversions section entirely
+
+**Step 3: Commit and push**
+
+```bash
+git add -A
+git commit -m "feat: initial standard tier — purchase tracking with GCLID attribution"
+git push -u origin main
 ```
 
 ---
 
-### Task 5: Generate Minified Files
+### Task 7: Archive This Repo
 
-There is no build system. Minified files in `min/` are maintained manually. Use an external minifier (Terser, UglifyJS, or an online tool) to generate minified versions.
+**Working directory:** `~/dev/la-datalayer-bridge`
 
-**Files:**
-- Create: `standard/min/parent-receiver.min.js`
-- Create: `standard/min/gtm-sender.min.js`
-- Create: `standard/min/gtm-sender.min.html`
+**Step 1: Update README to point to the new repos**
 
-**Step 1: Install terser (if not already available)**
+Add a prominent notice at the top of README.md:
 
-```bash
-npx terser --version
+```markdown
+> **This repository has been superseded.** The bridge is now available as two products:
+>
+> - **[ORES Bridge — Standard](https://github.com/brandonedley/ores-bridge-standard)** (public) — Purchase conversion tracking + GCLID attribution
+> - **[ORES Bridge — Advanced](https://github.com/brandonedley/ores-bridge-advanced)** (private) — Full funnel tracking + Enhanced Conversions
 ```
 
-If not available, use any JS minifier. The original minified files appear to have been generated with a bundler/minifier that preserves the IIFE structure.
-
-**Step 2: Minify Standard sender JS**
-
-Extract the JS from `standard/gtm-sender-tag.html` (everything between `<script>` and `</script>` tags), minify it, then create both `gtm-sender.min.js` (JS only) and `gtm-sender.min.html` (wrapped in `<script>` tags).
+**Step 2: Commit and push**
 
 ```bash
-# Extract JS from HTML
-sed -n '/<script>/,/<\/script>/p' standard/gtm-sender-tag.html | sed '1d;$d' > /tmp/standard-sender.js
-
-# Minify
-npx terser /tmp/standard-sender.js -c -m -o standard/min/gtm-sender.min.js
-
-# Wrap in script tags
-echo '<script>' > standard/min/gtm-sender.min.html
-cat standard/min/gtm-sender.min.js >> standard/min/gtm-sender.min.html
-echo '</script>' >> standard/min/gtm-sender.min.html
+git add README.md
+git commit -m "docs: add deprecation notice pointing to new tier repos"
+git push
 ```
 
-**Step 3: Minify Standard receiver**
+**Step 3: Archive the repo on GitHub**
 
 ```bash
-# Strip the leading JSDoc comment (everything before the IIFE), then minify
-npx terser standard/parent-receiver.js -c -m -o standard/min/parent-receiver.min.js
-```
-
-**Step 4: Verify minified files work**
-
-Check that minified files:
-- Contain `LADB-2026-EDLEY-7X9K2` (bridge ID preserved)
-- Do NOT contain removed function names (sanity check)
-- Are smaller than the source files
-
-```bash
-wc -c standard/gtm-sender-tag.html standard/min/gtm-sender.min.html
-wc -c standard/parent-receiver.js standard/min/parent-receiver.min.js
-grep -c 'LADB-2026-EDLEY-7X9K2' standard/min/gtm-sender.min.js standard/min/parent-receiver.min.js
-```
-
-**Step 5: Commit**
-
-```bash
-git add standard/min/
-git commit -m "chore: generate standard tier minified files"
-```
-
----
-
-### Task 6: Decide Root File Fate and Update Documentation
-
-The original root-level files (`gtm-sender-tag.html`, `parent-receiver.js`, `min/`) now have copies in `advanced/`. Decide whether to keep root files as-is (backwards compatibility) or remove them.
-
-**Recommendation:** Keep root files as-is for now. They serve as the "current" version for anyone who cloned the repo before the tier split. The README will explain the new structure.
-
-**Files:**
-- Modify: `README.md`
-- Modify: `CLAUDE.md`
-
-**Step 1: Update README.md**
-
-Add a section after "Quick Start" explaining the tier structure. Add a tier comparison table. Update the Files table to reflect the new layout.
-
-Key additions:
-- Tier overview table (Standard vs Advanced features)
-- Updated file layout showing `standard/` and `advanced/` directories
-- Note that root-level files are the legacy/Advanced version
-
-**Step 2: Update CLAUDE.md**
-
-Update the File Layout section to reflect `standard/` and `advanced/` directories. Add a note about tier separation to the Architecture section.
-
-**Step 3: Commit**
-
-```bash
-git add README.md CLAUDE.md
-git commit -m "docs: document standard vs advanced tier structure"
+gh repo archive brandonedley/la-datalayer-bridge --yes
 ```
 
 ---
 
 ## Summary
 
-| Task | What | Commit |
-|------|------|--------|
-| 1 | Create directory structure | `chore: create standard and advanced tier directories` |
-| 2 | Copy current files to advanced/ with tier label | `feat: create advanced tier from current source files` |
-| 3 | Write standard sender (stripped-down fork) | `feat: create standard sender (purchase + quote + GCLID + height)` |
-| 4 | Write standard receiver (reduced GA4_EVENTS) | `feat: create standard receiver (purchase + generate_lead only)` |
-| 5 | Generate minified files for standard | `chore: generate standard tier minified files` |
-| 6 | Update README and CLAUDE.md | `docs: document standard vs advanced tier structure` |
+| Task | Repo | What |
+|------|------|------|
+| 1 | `ores-bridge-advanced` | Create repo, copy current code with tier labels |
+| 2 | `ores-bridge-standard` | Create repo, copy LICENSE |
+| 3 | `ores-bridge-standard` | Write stripped-down sender (remove ~450 lines) |
+| 4 | `ores-bridge-standard` | Write receiver (GA4_EVENTS: 11 entries → 2) |
+| 5 | `ores-bridge-standard` | Generate minified files |
+| 6 | `ores-bridge-standard` | Write README, SETUP-GUIDE, push |
+| 7 | `la-datalayer-bridge` | Add deprecation notice, archive |
